@@ -554,8 +554,8 @@ export class ChatPanelMessages extends WithDisposable(ShadowlessElement) {
                       );
                       const rootService = host.spec.getService('affine:page');
                       const { notificationService } = rootService;
-                      if (success && notificationService) {
-                        notificationService.notify({
+                      if (success) {
+                        notificationService?.notify({
                           title: action.toast,
                           accent: 'success',
                           onClose: function (): void {},

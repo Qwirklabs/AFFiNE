@@ -113,13 +113,11 @@ export class ChatCopyMore extends WithDisposable(LitElement) {
   private readonly _notifySuccess = (title: string) => {
     const rootService = this.host.spec.getService('affine:page');
     const { notificationService } = rootService;
-    if (notificationService) {
-      notificationService.notify({
-        title: title,
-        accent: 'success',
-        onClose: function (): void {},
-      });
-    }
+    notificationService?.notify({
+      title: title,
+      accent: 'success',
+      onClose: function (): void {},
+    });
   };
 
   private async _retry() {
