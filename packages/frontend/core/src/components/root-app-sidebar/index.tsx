@@ -2,6 +2,7 @@ import { AnimatedDeleteIcon } from '@affine/component';
 import { getDNDId } from '@affine/core/hooks/affine/use-global-dnd-helper';
 import { useAsyncCallback } from '@affine/core/hooks/affine-async-hooks';
 import { CollectionService } from '@affine/core/modules/collection';
+import { OrganizeSidebarList } from '@affine/core/modules/organize';
 import { TelemetryWorkspaceContextService } from '@affine/core/modules/telemetry/services/telemetry';
 import { mixpanel } from '@affine/core/utils';
 import { apis, events } from '@affine/electron-api';
@@ -203,6 +204,7 @@ export const RootAppSidebar = memo(
           </MenuItem>
         </SidebarContainer>
         <SidebarScrollableContainer>
+          {runtimeConfig.enableOrganize && <OrganizeSidebarList />}
           <FavoriteList docCollection={docCollection} />
           <CategoryDivider label={t['com.affine.rootAppSidebar.collections']()}>
             <AddCollectionButton node={node} onClick={handleCreateCollection} />
