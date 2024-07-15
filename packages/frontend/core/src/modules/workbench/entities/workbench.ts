@@ -1,8 +1,10 @@
 import { Unreachable } from '@affine/env/constant';
 import { Entity, LiveData } from '@toeverything/infra';
-import type { To } from 'history';
+import type { Path, To } from 'history';
 import { nanoid } from 'nanoid';
+import { map } from 'rxjs';
 
+import type { WorkbenchStateProvider } from '../services/workbench-view-state';
 import { View } from './view';
 
 export type WorkbenchPosition = 'beside' | 'active' | 'head' | 'tail' | number;
@@ -12,18 +14,55 @@ interface WorkbenchOpenOptions {
   replaceHistory?: boolean;
 }
 
-export class Workbench extends Entity {
-  readonly views$ = new LiveData([
-    this.framework.createEntity(View, { id: nanoid() }),
-  ]);
+function comparePath(a?: Path, b?: Path) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.pathname === b.pathname && a.search === b.search && a.hash === b.hash
+  );
+}
 
-  activeViewIndex$ = new LiveData(0);
+export class Workbench extends Entity {
+  constructor(private readonly workbenchStateProvider: WorkbenchStateProvider) {
+    super();
+  }
+
+  readonly views$: LiveData<View[]> = LiveData.from(
+    this.workbenchStateProvider.views$.pipe(
+      map(viewMetas => {
+        // reuse views when possible
+        const oldViews = this.views$.value;
+        return viewMetas.map(viewMeta => {
+          // is old view
+          let view = oldViews?.find(v => v.id === viewMeta.id);
+          // check if view location changed
+          if (view) {
+            if (
+              viewMeta.path &&
+              !comparePath(view.location$.value, viewMeta.path)
+            ) {
+              view.history.replace(viewMeta.path);
+            }
+          } else {
+            view = this.framework.createEntity(View, {
+              id: viewMeta.id,
+              defaultLocation: viewMeta.path,
+            });
+          }
+          return view;
+        });
+      })
+    ),
+    []
+  );
+  readonly activeViewIndex$ = this.workbenchStateProvider.activeViewIndex$;
+  readonly basename$ = this.workbenchStateProvider.basename$;
+
   activeView$ = LiveData.computed(get => {
     const activeIndex = get(this.activeViewIndex$);
     const views = get(this.views$);
     return views[activeIndex];
   });
-  basename$ = new LiveData('/');
   location$ = LiveData.computed(get => {
     return get(get(this.activeView$).location$);
   });
@@ -34,9 +73,13 @@ export class Workbench extends Entity {
     this.activeViewIndex$.next(index);
   }
 
-  createView(at: WorkbenchPosition = 'beside', defaultLocation: To) {
+  createView(
+    at: WorkbenchPosition = 'beside',
+    defaultLocation: To,
+    id = nanoid()
+  ) {
     const view = this.framework.createEntity(View, {
-      id: nanoid(),
+      id,
       defaultLocation,
     });
     const newViews = [...this.views$.value];
